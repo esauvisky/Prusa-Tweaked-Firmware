@@ -19,7 +19,7 @@
 #define DEVELOPER
 
 // Printer name
-#define CUSTOM_MENDEL_NAME "Prusa i3 MK3S"
+#define CUSTOM_MENDEL_NAME "Emi's MK3S+"
 
 // Electronics
 #define MOTHERBOARD BOARD_EINSY_1_0a
@@ -173,7 +173,7 @@
 
 //#define DEBUG_PULLUP_CRASH //Test Pullup crash
 
-//#define DEBUG_BUILD
+#define DEBUG_BUILD
 //#define DEBUG_SEC_LANG   //secondary language debug output at startup
 //#define DEBUG_XFLASH   //debug external spi flash
 #ifdef DEBUG_BUILD
@@ -181,7 +181,7 @@
 #define DEBUG_DCODES //D codes
 #define DEBUG_STACK_MONITOR        //Stack monitor in stepper ISR
 //#define DEBUG_FSENSOR_LOG          //Reports fsensor status to serial
-//#define DEBUG_CRASHDET_COUNTERS  //Display crash-detection counters on LCD
+#define DEBUG_CRASHDET_COUNTERS  //Display crash-detection counters on LCD
 //#define DEBUG_RESUME_PRINT       //Resume/save print debug enable 
 //#define DEBUG_UVLO_AUTOMATIC_RECOVER // Power panic automatic recovery debug output 
 //#define DEBUG_DISABLE_XMINLIMIT  //x min limit ignored
@@ -641,7 +641,7 @@
 
 #define DEFAULT_PID_TEMP 210
 
-#define MIN_PRINT_FAN_SPEED 75
+#define MIN_PRINT_FAN_SPEED 20
 
 
 // How much shall the print head be lifted on power panic?
