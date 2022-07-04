@@ -9,6 +9,10 @@
 #include "language.h"
 #include "spi.h"
 #include "Timer.h"
+#ifdef DEBUG_CRASHDET_COUNTERS
+#include "conv2str.h"
+#endif
+
 
 #define TMC2130_GCONF_NORMAL 0x00000000 // spreadCycle
 #define TMC2130_GCONF_SGSENS 0x00003180 // spreadCycle with stallguard (stall activates DIAG0 and DIAG1 [pushpull])
