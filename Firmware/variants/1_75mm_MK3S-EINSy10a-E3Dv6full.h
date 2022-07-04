@@ -173,7 +173,11 @@
 
 //#define DEBUG_PULLUP_CRASH //Test Pullup crash
 
-#define DEBUG_BUILD
+#define DEBUG_DISABLE_STARTMSGS //no startup messages
+#define PLANNER_DIAGNOSTICS // Show the planner queue status on printer display.
+#define CMD_DIAGNOSTICS //Show cmd queue length on printer display
+
+// #define DEBUG_BUILD
 //#define DEBUG_SEC_LANG   //secondary language debug output at startup
 //#define DEBUG_XFLASH   //debug external spi flash
 #ifdef DEBUG_BUILD
@@ -441,8 +445,8 @@
 #define MESH_MAX_Y 210
 
 // Mesh upsample definition
-#define MESH_NUM_X_POINTS 13
-#define MESH_NUM_Y_POINTS 13
+#define MESH_NUM_X_POINTS 11
+#define MESH_NUM_Y_POINTS 11
 // Mesh measure definition
 #define MESH_MEAS_NUM_X_POINTS 3
 #define MESH_MEAS_NUM_Y_POINTS 3
