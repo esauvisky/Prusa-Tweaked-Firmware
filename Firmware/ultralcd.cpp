@@ -708,7 +708,8 @@ void lcdui_print_status_screen(void)
 	lcd_space(3); //3 spaces
 
     //Print Z-coordinate (8 chars total)
-	lcdui_print_Z_coord();
+    lcdui_print_time();
+	// lcdui_print_Z_coord();
 
     lcd_set_cursor(0, 1); //line 1
 
