@@ -5860,6 +5860,10 @@ static void lcd_main_menu()
     } else {
         MENU_ITEM_SUBMENU_P(_i("Preheat"), lcd_preheat_menu);////MSG_PREHEAT c=18
     }
+    if ( ! ( IS_SD_PRINTING || is_usb_printing || (lcd_commands_type == LcdCommands::Layer1Cal) ) ) {
+        MENU_ITEM_SUBMENU_P(_T(MSG_SETTINGS), lcd_settings_menu);
+        if(!isPrintPaused) MENU_ITEM_SUBMENU_P(_T(MSG_CALIBRATION), lcd_calibration_menu);
+    }
 
     if (mesh_bed_leveling_flag == false && homing_flag == false && !isPrintPaused) {
         if (usb_timer.running()) {
@@ -5939,8 +5943,6 @@ static void lcd_main_menu()
             bFilamentFirstRun=true;
             MENU_ITEM_SUBMENU_P(_T(MSG_UNLOAD_FILAMENT), lcd_unLoadFilament);
         }
-    MENU_ITEM_SUBMENU_P(_T(MSG_SETTINGS), lcd_settings_menu);
-    if(!isPrintPaused) MENU_ITEM_SUBMENU_P(_T(MSG_CALIBRATION), lcd_calibration_menu);
     }
 
     if (!usb_timer.running() && (lcd_commands_type != LcdCommands::Layer1Cal)) {
