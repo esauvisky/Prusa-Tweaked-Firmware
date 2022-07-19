@@ -119,7 +119,7 @@
 //number of bytes from end of the file to start check
 #define END_FILE_SECTION 20000
 
-#define Z_AXIS_ALWAYS_ON 1
+#define Z_AXIS_ALWAYS_ON 0
 
 //Crash detection
 #define CRASHDET_TIMER 45 //seconds
