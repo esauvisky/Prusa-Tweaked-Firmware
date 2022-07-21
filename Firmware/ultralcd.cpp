@@ -5171,7 +5171,12 @@ static void lcd_settings_menu()
 	MENU_BEGIN();
 	MENU_ITEM_BACK_P(_T(MSG_MAIN));
 
-	MENU_ITEM_SUBMENU_P(_i("Temperature"), lcd_control_temperature_menu);////MSG_TEMPERATURE c=18
+
+    if(!farm_mode)
+    {
+        bSettings=true;                              // flag ('fake parameter') for 'lcd_hw_setup_menu()' function
+        MENU_ITEM_SUBMENU_P(_T(MSG_HW_SETUP), lcd_hw_setup_menu);
+    }
 
 	if (!PRINTER_ACTIVE || isPrintPaused)
     {
@@ -5188,13 +5193,6 @@ static void lcd_settings_menu()
 	MENU_ITEM_TOGGLE_P(_T(MSG_FANS_CHECK), fans_check_enabled ? _T(MSG_ON) : _T(MSG_OFF), lcd_set_fan_check);
 
 	SETTINGS_SILENT_MODE;
-
-    if(!farm_mode)
-    {
-        bSettings=true;                              // flag ('fake parameter') for 'lcd_hw_setup_menu()' function
-        MENU_ITEM_SUBMENU_P(_T(MSG_HW_SETUP), lcd_hw_setup_menu);
-    }
-
 	SETTINGS_MMU_MODE;
 
 	MENU_ITEM_SUBMENU_P(_T(MSG_MESH_BED_LEVELING), lcd_mesh_bed_leveling_settings);
@@ -5852,6 +5850,37 @@ static void lcd_main_menu()
         MENU_ITEM_SUBMENU_P(_T(MSG_BABYSTEP_Z), lcd_babystep_z);//8
     }
 
+    if ( ! ( IS_SD_PRINTING || is_usb_printing || (lcd_commands_type == LcdCommands::Layer1Cal) ) ) {
+	    MENU_ITEM_SUBMENU_P(_i("Temperature"), lcd_control_temperature_menu);////MSG_TEMPERATURE c=18
+        if (mmu_enabled) {
+            MENU_ITEM_SUBMENU_P(_T(MSG_LOAD_FILAMENT), fil_load_menu);
+            MENU_ITEM_SUBMENU_P(_i("Load to nozzle"), mmu_load_to_nozzle_menu);////MSG_LOAD_TO_NOZZLE c=18
+    //-//          MENU_ITEM_FUNCTION_P(_T(MSG_UNLOAD_FILAMENT), extr_unload);
+    //bFilamentFirstRun=true;
+            MENU_ITEM_SUBMENU_P(_T(MSG_UNLOAD_FILAMENT), mmu_unload_filament);
+            MENU_ITEM_SUBMENU_P(_T(MSG_EJECT_FILAMENT), mmu_fil_eject_menu);
+    #ifdef  MMU_HAS_CUTTER
+            MENU_ITEM_SUBMENU_P(_T(MSG_CUT_FILAMENT), mmu_cut_filament_menu);
+    #endif //MMU_HAS_CUTTER
+        } else {
+    #ifdef SNMM
+            MENU_ITEM_SUBMENU_P(_T(MSG_UNLOAD_FILAMENT), fil_unload_menu);
+            MENU_ITEM_SUBMENU_P(_i("Change extruder"), change_extr_menu);////MSG_CHANGE_EXTR c=20
+    #endif
+    #ifdef FILAMENT_SENSOR
+            if ((fsensor_autoload_enabled == true) && (fsensor_enabled == true) && (mmu_enabled == false))
+                MENU_ITEM_SUBMENU_P(_i("AutoLoad filament"), lcd_menu_AutoLoadFilament);////MSG_AUTOLOAD_FILAMENT c=18
+            else
+    #endif //FILAMENT_SENSOR
+            {
+                bFilamentFirstRun=true;
+                MENU_ITEM_SUBMENU_P(_T(MSG_LOAD_FILAMENT), lcd_LoadFilament);
+            }
+            bFilamentFirstRun=true;
+            MENU_ITEM_SUBMENU_P(_T(MSG_UNLOAD_FILAMENT), lcd_unLoadFilament);
+        }
+    }
+
     if (farm_mode)
         MENU_ITEM_FUNCTION_P(_T(MSG_FILAMENTCHANGE), lcd_colorprint_change);//8
 
@@ -5921,29 +5950,6 @@ static void lcd_main_menu()
         }
     }
 
-    if ( ! ( IS_SD_PRINTING || usb_timer.running() || (lcd_commands_type == LcdCommands::Layer1Cal) ) ) {
-        if (mmu_enabled) {
-            MENU_ITEM_SUBMENU_P(_T(MSG_LOAD_FILAMENT), mmu_load_filament_menu);
-            MENU_ITEM_SUBMENU_P(_i("Load to nozzle"), mmu_load_to_nozzle_menu);////MSG_LOAD_TO_NOZZLE c=18
-            MENU_ITEM_SUBMENU_P(_T(MSG_UNLOAD_FILAMENT), mmu_unload_filament);
-            MENU_ITEM_SUBMENU_P(_T(MSG_EJECT_FILAMENT), mmu_fil_eject_menu);
-#ifdef  MMU_HAS_CUTTER
-            MENU_ITEM_SUBMENU_P(_T(MSG_CUT_FILAMENT), mmu_cut_filament_menu);
-#endif //MMU_HAS_CUTTER
-        } else {
-#ifdef FILAMENT_SENSOR
-            if ((fsensor_autoload_enabled == true) && (fsensor_enabled == true) && (mmu_enabled == false))
-                MENU_ITEM_SUBMENU_P(_i("AutoLoad filament"), lcd_menu_AutoLoadFilament);////MSG_AUTOLOAD_FILAMENT c=18
-            else
-#endif //FILAMENT_SENSOR
-            {
-                bFilamentFirstRun=true;
-                MENU_ITEM_SUBMENU_P(_T(MSG_LOAD_FILAMENT), lcd_LoadFilament);
-            }
-            bFilamentFirstRun=true;
-            MENU_ITEM_SUBMENU_P(_T(MSG_UNLOAD_FILAMENT), lcd_unLoadFilament);
-        }
-    }
 
     if (!usb_timer.running() && (lcd_commands_type != LcdCommands::Layer1Cal)) {
         MENU_ITEM_SUBMENU_P(_i("Statistics"), lcd_menu_statistics);////MSG_STATISTICS c=18
