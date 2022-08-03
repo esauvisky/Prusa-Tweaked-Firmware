@@ -5940,7 +5940,7 @@ static void lcd_main_menu()
     }
 #endif //SDSUPPORT
 
-    if(!isPrintPaused && !IS_SD_PRINTING && !usb_timer.running() && (lcd_commands_type != LcdCommands::Layer1Cal)) {
+    if((!isPrintPaused && !IS_SD_PRINTING && !is_usb_printing) || (isPrintPaused && ( IS_SD_PRINTING || is_usb_printing)) || ((IS_SD_PRINTING || is_usb_printing || isPrintPaused) && mesh_bed_leveling_flag == false && homing_flag == false) ) {
         if (!farm_mode) {
             const int8_t sheet = eeprom_read_byte(&(EEPROM_Sheets_base->active_sheet));
             const int8_t nextSheet = eeprom_next_initialized_sheet(sheet);
