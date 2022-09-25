@@ -70,7 +70,7 @@
 #define X_MIN_POS 0
 #define Y_MAX_POS 210
 #define Y_MIN_POS -4 //orig -4
-#define Z_MAX_POS 175
+#define Z_MAX_POS 180
 #define Z_MIN_POS 0.15
 
 // Canceled home position
@@ -646,7 +646,7 @@
 
 #define DEFAULT_PID_TEMP 210
 
-#define MIN_PRINT_FAN_SPEED 20
+#define MIN_PRINT_FAN_SPEED 75
 
 
 // How much shall the print head be lifted on power panic?

@@ -308,8 +308,7 @@ uint8_t saved_filament_type;
 #define SAVED_TARGET_UNSET X_COORD_INVALID
 float saved_target[NUM_AXIS] = {SAVED_TARGET_UNSET, 0, 0, 0};
 
-// save/restore printing in case that mmu was not responding
-bool mmu_print_saved = false;
+uint16_t saved_segment_idx = 0;
 
 // storing estimated time to end of print counted by slicer
 uint8_t print_percent_done_normal = PRINT_PERCENT_DONE_INIT;
@@ -1095,25 +1094,7 @@ void setup()
 	setup_killpin();
 	setup_powerhold();
 
-	farm_mode = eeprom_read_byte((uint8_t*)EEPROM_FARM_MODE);
-	if (farm_mode == 0xFF) {
-		farm_mode = false; //if farm_mode has not been stored to eeprom yet and farm number is set to zero or EEPROM is fresh, deactivate farm mode
-		eeprom_update_byte((uint8_t*)EEPROM_FARM_MODE, farm_mode);
-	} else if (farm_mode) {
-		no_response = true; //we need confirmation by recieving PRUSA thx
-		important_status = 8;
-		prusa_statistics(8);
-#ifdef HAS_SECOND_SERIAL_PORT
-		selectedSerialPort = 1;
-#endif //HAS_SECOND_SERIAL_PORT
-		MYSERIAL.begin(BAUDRATE);
-#ifdef FILAMENT_SENSOR
-		//disabled filament autoload (PFW360)
-		fsensor_autoload_set(false);
-#endif //FILAMENT_SENSOR
-		// ~ FanCheck -> on
-		eeprom_update_byte((uint8_t*)EEPROM_FAN_CHECK_ENABLED, true);
-	}
+    farm_mode_init();
 
 #ifdef TMC2130
     if( FarmOrUserECool() ){
@@ -1389,11 +1370,9 @@ void setup()
     enable_z();
 #endif
 
-    if (farm_mode) {
-        // The farm monitoring SW may accidentally expect
-        // 2 messages of "printer started" to consider a printer working.
-        prusa_statistics(8);
-    }
+    // The farm monitoring SW may accidentally expect
+    // 2 messages of "printer started" to consider a printer working.
+    prusa_statistics(8);
 
 	// Enable Toshiba FlashAir SD card / WiFi enahanced card.
 	card.ToshibaFlashAir_enable(eeprom_read_byte((unsigned char*)EEPROM_TOSHIBA_FLASH_AIR_COMPATIBLITY) == 1);
@@ -1518,6 +1497,7 @@ void setup()
 
   if (!farm_mode) {
     check_if_fw_is_on_right_printer();
+#endif //defined(FILAMENT_SENSOR) && defined(FSENSOR_PROBING)
     show_fw_version_warnings();
   }
 
@@ -1635,8 +1615,9 @@ void setup()
           #ifdef DEBUG_UVLO_AUTOMATIC_RECOVER
         puts_P(_N("Normal recovery!"));
           #endif
-          if ( lcd_show_fullscreen_message_yes_no_and_wait_P(_T(MSG_RECOVER_PRINT), false) ) recover_print(0);
-          else {
+          if ( lcd_show_fullscreen_message_yes_no_and_wait_P(_T(MSG_RECOVER_PRINT), false) == LCD_LEFT_BUTTON_CHOICE) {
+              recover_print(0);
+          } else {
               eeprom_update_byte((uint8_t*)EEPROM_UVLO, 0);
               lcd_update_enable(true);
               lcd_update(2);
@@ -1842,13 +1823,6 @@ void loop()
 	else if (usb_timer.expired(10000)) { //just need to check if it expired. Nothing else is needed to be done.
 		;
 	}
-
-#ifdef FANCHECK
-    if (fan_check_error && isPrintPaused && !IS_SD_PRINTING) {
-        KEEPALIVE_STATE(PAUSED_FOR_USER);
-        host_keepalive(); //prevent timeouts since usb processing is disabled until print is resumed. This is for a crude way of pausing a print on all hosts.
-    }
-#endif
 
 #ifdef PRUSA_M28
     if (prusa_sd_card_upload)
@@ -3635,31 +3609,9 @@ void gcode_M123()
 }
 #endif //FANCHECK and TACH_0 or TACH_1
 
-//! extracted code to compute z_shift for M600 in case of filament change operation
-//! requested from fsensors.
-//! The function ensures, that the printhead lifts to at least 25mm above the heat bed
-//! unlike the previous implementation, which was adding 25mm even when the head was
-//! printing at e.g. 24mm height.
-//! A safety margin of FILAMENTCHANGE_ZADD is added in all cases to avoid touching
-//! the printout.
-//! This function is templated to enable fast change of computation data type.
-//! @return new z_shift value
-template<typename T>
-static T gcode_M600_filament_change_z_shift()
-{
-#ifdef FILAMENTCHANGE_ZADD
-	static_assert(Z_MAX_POS < (255 - FILAMENTCHANGE_ZADD), "Z-range too high, change the T type from uint8_t to uint16_t");
-	// avoid floating point arithmetics when not necessary - results in shorter code
-	T z_shift = T(FILAMENTCHANGE_ZADD); // always move above printout
-	T ztmp = T( current_position[Z_AXIS] );
-	if((ztmp + z_shift) < T(MIN_Z_FOR_SWAP)){
-		z_shift = T(MIN_Z_FOR_SWAP) - ztmp; // make sure to be at least 25mm above the heat bed
-	}
-	return z_shift;
-#else
-	return T(0);
-#endif
-}
+static void mmu_M600_wait_and_beep() {
+    // Beep and wait for user to remove old filament and prepare new filament for load
+    KEEPALIVE_STATE(PAUSED_FOR_USER);
 
 static void gcode_M600(bool automatic, float x_position, float y_position, float z_shift, float e_shift, float /*e_shift_late*/)
 {
@@ -3798,15 +3750,8 @@ void gcode_M701()
 		prusa_statistics(22);
 	}
 
-	if (mmu_enabled)
-	{
-		extr_adj(tmp_extruder);//loads current extruder
-		mmu_extruder = tmp_extruder;
-	}
-	else
-	{
-		enable_z();
-		custom_message_type = CustomMsg::FilamentLoading;
+        current_position[E_AXIS] += fastLoadLength;
+        plan_buffer_line_curposXYZE(FILAMENTCHANGE_EFEED_FIRST); //fast sequence
 
 #ifdef FSENSOR_QUALITY
 		fsensor_oq_meassure_start(40);
@@ -3817,35 +3762,8 @@ void gcode_M701()
 		plan_buffer_line_curposXYZE(400 / 60); //fast sequence
 		st_synchronize();
 
-        raise_z_above(MIN_Z_FOR_LOAD, false);
-		current_position[E_AXIS] += 30;
-		plan_buffer_line_curposXYZE(400 / 60); //fast sequence
-
-		load_filament_final_feed(); //slow sequence
-		st_synchronize();
-
-    Sound_MakeCustom(50,500,false);
-
-		if (!farm_mode && loading_flag) {
-			lcd_load_filament_color_check();
-		}
-		lcd_update_enable(true);
-		lcd_update(2);
-		lcd_setstatuspgm(MSG_WELCOME);
-		disable_z();
-		loading_flag = false;
-		custom_message_type = CustomMsg::Status;
-
-#ifdef FSENSOR_QUALITY
-        fsensor_oq_meassure_stop();
-
-        if (!fsensor_oq_result())
-        {
-            bool disable = lcd_show_fullscreen_message_yes_no_and_wait_P(_i("Fil. sensor response is poor, disable it?"), false, true);
-            lcd_update_enable(true);
-            lcd_update(2);
-            if (disable)
-                fsensor_disable();
+        if (!farm_mode && loading_flag) {
+            lcd_load_filament_color_check();
         }
 #endif //FSENSOR_QUALITY
 	}
@@ -4411,13 +4329,11 @@ void process_commands()
 
     Set of internal PRUSA commands
     #### Usage
-         PRUSA [ Ping | PRN | FAN | fn | thx | uvlo | MMURES | RESET | fv | M28 | SN | Fir | Rev | Lang | Lz | FR ]
+         PRUSA [ PRN | FAN | thx | uvlo | MMURES | RESET | fv | M28 | SN | Fir | Rev | Lang | Lz | FR ]
 
     #### Parameters
-      - `Ping`
       - `PRN` - Prints revision of the printer
       - `FAN` - Prints fan details
-      - `fn` - Prints farm no.
       - `thx`
       - `uvlo`
       - `MMURES` - Reset MMU
@@ -4435,29 +4351,17 @@ void process_commands()
       - `nozzle` - prints nozzle diameter (farm mode only), works like M862.1 P, e.g. `PRUSA nozzle`
     */
 
-
-		if (code_seen_P(PSTR("Ping"))) {  // PRUSA Ping
-			if (farm_mode) {
-				PingTime = _millis();
-			}
-		}
-		else if (code_seen_P(PSTR("PRN"))) { // PRUSA PRN
-		  printf_P(_N("%u"), status_number);
-
-        } else if( code_seen_P(PSTR("FANPINTST"))){
+        if (farm_prusa_code_seen()) {}
+        else if(code_seen_P(PSTR("FANPINTST"))) {
             gcode_PRUSA_BadRAMBoFanTest();
-        }else if (code_seen_P(PSTR("FAN"))) { // PRUSA FAN
-			printf_P(_N("E0:%d RPM\nPRN0:%d RPM\n"), 60*fan_speed[0], 60*fan_speed[1]);
-		}
-		else if (code_seen_P(PSTR("thx"))) // PRUSA thx
-		{
-			no_response = false;
-		}
-		else if (code_seen_P(PSTR("uvlo"))) // PRUSA uvlo
-		{
-               eeprom_update_byte((uint8_t*)EEPROM_UVLO,0);
-               enquecommand_P(PSTR("M24"));
-		}
+        }
+        else if (code_seen_P(PSTR("FAN"))) { // PRUSA FAN
+            printf_P(_N("E0:%d RPM\nPRN0:%d RPM\n"), 60*fan_speed[0], 60*fan_speed[1]);
+        }
+        else if (code_seen_P(PSTR("uvlo"))) { // PRUSA uvlo
+            eeprom_update_byte((uint8_t*)EEPROM_UVLO,0);
+            enquecommand_P(PSTR("M24"));
+        }
 		else if (code_seen_P(PSTR("MMURES"))) // PRUSA MMURES
 		{
 			mmu_reset();
@@ -4698,19 +4602,17 @@ eeprom_update_word((uint16_t*)EEPROM_NOZZLE_DIAMETER_uM,0xFFFF);
 
     */
     case 2:
-      if(Stopped == false) {
-        get_arc_coordinates();
-        prepare_arc_move(true);
-      }
-      break;
-
-    // -------------------------------
     case 3:
-      if(Stopped == false) {
-        get_arc_coordinates();
-        prepare_arc_move(false);
-      }
-      break;
+    {
+        uint16_t start_segment_idx = restore_interrupted_gcode();
+#ifdef SF_ARC_FIX
+        bool relative_mode_backup = relative_mode;
+        relative_mode = true;
+#endif
+        get_coordinates(); // For X Y Z E F
+#ifdef SF_ARC_FIX
+        relative_mode=relative_mode_backup;
+#endif
 
 
     /*!
@@ -5394,12 +5296,10 @@ eeprom_update_word((uint16_t*)EEPROM_NOZZLE_DIAMETER_uM,0xFFFF);
                 SERIAL_PROTOCOLPGM("\nZ search height: ");
                 SERIAL_PROTOCOL(MESH_HOME_Z_SEARCH);
                 SERIAL_PROTOCOLLNPGM("\nMeasured points:");
-
-                float midPoint = mbl.z_values[((MESH_NUM_Y_POINTS + 1) / 2) - 1][((MESH_NUM_Y_POINTS + 1) / 2) - 1];
-                for (int y = MESH_NUM_Y_POINTS - 1; y >= 0; y--) {
-                    for (int x = 0; x < MESH_NUM_X_POINTS; x++) {
+                for (uint8_t y = MESH_NUM_Y_POINTS; y-- > 0;) {
+                    for (uint8_t x = 0; x < MESH_NUM_X_POINTS; x++) {
                         SERIAL_PROTOCOLPGM("  ");
-                        SERIAL_PROTOCOL_F(mbl.z_values[y][x] - midPoint, 5);
+                        SERIAL_PROTOCOL_F(mbl.z_values[y][x], 5);
                     }
                     SERIAL_PROTOCOLLN();
                 }
@@ -6467,7 +6367,7 @@ Sigma_Exit:
 
         LCD_MESSAGERPGM(_T(MSG_HEATING_COMPLETE));
 		heating_status = HeatingStatus::EXTRUDER_HEATING_COMPLETE;
-		if (farm_mode) { prusa_statistics(2); };
+        prusa_statistics(2);
 
         //starttime=_millis();
         previous_millis_cmd.start();
@@ -6493,7 +6393,7 @@ Sigma_Exit:
         bool CooldownNoWait = false;
         LCD_MESSAGERPGM(_T(MSG_BED_HEATING));
 		heating_status = HeatingStatus::BED_HEATING;
-		if (farm_mode) { prusa_statistics(1); };
+        prusa_statistics(1);
         if (code_seen('S'))
 		{
           setTargetBed(code_value());
@@ -7758,6 +7658,69 @@ Sigma_Exit:
     }
     break;
 
+#ifdef TEMP_MODEL
+    /*!
+    ### M310 - Temperature model settings <a href="https://reprap.org/wiki/G-code#M310:_Temperature_model_settings">M310: Temperature model settings</a>
+    #### Usage
+
+        M310                                           ; report values
+        M310 [ A ] [ F ]                               ; autotune
+        M310 [ S ]                                     ; set 0=disable 1=enable
+        M310 [ I ] [ R ]                               ; set resistance at index
+        M310 [ P | C ]                                 ; set power, capacitance
+        M310 [ B | E | W ]                             ; set beeper, warning and error threshold
+        M310 [ T ]                                     ; set ambient temperature correction
+
+    #### Parameters
+    - `I` - resistance index position (0-15)
+    - `R` - resistance value at index (K/W; requires `I`)
+    - `P` - power (W)
+    - `C` - capacitance (J/K)
+    - `S` - set 0=disable 1=enable
+    - `B` - beep and warn when reaching warning threshold 0=disable 1=enable (default: 1)
+    - `E` - error threshold (K/s; default in variant)
+    - `W` - warning threshold (K/s; default in variant)
+    - `T` - ambient temperature correction (K; default in variant)
+    - `A` - autotune C+R values
+    - `F` - force model self-test state (0=off 1=on) during autotune using current values
+    */
+    case 310:
+    {
+        // parse all parameters
+        float P = NAN, C = NAN, R = NAN, E = NAN, W = NAN, T = NAN;
+        int8_t I = -1, S = -1, B = -1, A = -1, F = -1;
+        if(code_seen('C')) C = code_value();
+        if(code_seen('P')) P = code_value();
+        if(code_seen('I')) I = code_value_short();
+        if(code_seen('R')) R = code_value();
+        if(code_seen('S')) S = code_value_short();
+        if(code_seen('B')) B = code_value_short();
+        if(code_seen('E')) E = code_value();
+        if(code_seen('W')) W = code_value();
+        if(code_seen('T')) T = code_value();
+        if(code_seen('A')) A = code_value_short();
+        if(code_seen('F')) F = code_value_short();
+
+        // report values if nothing has been requested
+        if(isnan(C) && isnan(P) && isnan(R) && isnan(E) && isnan(W) && isnan(T) && I < 0 && S < 0 && B < 0 && A < 0) {
+            temp_model_report_settings();
+            break;
+        }
+
+        // update all parameters
+        if(B >= 0) temp_model_set_warn_beep(B);
+        if(!isnan(C) || !isnan(P) || !isnan(T) || !isnan(W) || !isnan(E)) temp_model_set_params(C, P, T, W, E);
+        if(I >= 0 && !isnan(R)) temp_model_set_resistance(I, R);
+
+        // enable the model last, if requested
+        if(S >= 0) temp_model_set_enabled(S);
+
+        // run autotune
+        if(A >= 0) temp_model_autotune(A, F > 0);
+    }
+    break;
+#endif
+
     /*!
 	### M400 - Wait for all moves to finish <a href="https://reprap.org/wiki/G-code#M400:_Wait_for_current_moves_to_finish">M400: Wait for current moves to finish</a>
 	Finishes all current moves and and thus clears the buffer.
@@ -8696,7 +8659,7 @@ Sigma_Exit:
     ### M702 - Unload filament <a href="https://reprap.org/wiki/G-code#M702:_Unload_filament">G32: Undock Z Probe sled</a>
     #### Usage
 
-        M702 [ C ]
+        M702 [ U | Z ]
 
     #### Parameters
     - `C` - Unload just current filament
@@ -8745,139 +8708,8 @@ Sigma_Exit:
   @n Tx Same as T?, except nozzle doesn't have to be preheated. Tc must be placed after extruder nozzle is preheated to finish filament load.
   @n Tc Load to nozzle after filament was prepared by Tc and extruder nozzle is already heated.
   */
-  else if(code_seen('T'))
-  {
-      static const char duplicate_Tcode_ignored[] PROGMEM = "Duplicate T-code ignored.";
-
-      int index;
-      bool load_to_nozzle = false;
-      for (index = 1; *(strchr_pointer + index) == ' ' || *(strchr_pointer + index) == '\t'; index++);
-
-      *(strchr_pointer + index) = tolower(*(strchr_pointer + index));
-
-      if ((*(strchr_pointer + index) < '0' || *(strchr_pointer + index) > '4') && *(strchr_pointer + index) != '?' && *(strchr_pointer + index) != 'x' && *(strchr_pointer + index) != 'c') {
-          SERIAL_ECHOLNPGM("Invalid T code.");
-      }
-	  else if (*(strchr_pointer + index) == 'x'){ //load to bondtech gears; if mmu is not present do nothing
-		if (mmu_enabled)
-		{
-			tmp_extruder = choose_menu_P(_T(MSG_SELECT_FILAMENT), _T(MSG_FILAMENT));
-			if ((tmp_extruder == mmu_extruder) && mmu_fil_loaded) //dont execute the same T-code twice in a row
-			{
-				puts_P(duplicate_Tcode_ignored);
-			}
-			else
-			{
-				st_synchronize();
-				mmu_command(MmuCmd::T0 + tmp_extruder);
-				manage_response(true, true, MMU_TCODE_MOVE);
-			}
-		}
-	  }
-	  else if (*(strchr_pointer + index) == 'c') { //load to from bondtech gears to nozzle (nozzle should be preheated)
-	  	if (mmu_enabled)
-		{
-			st_synchronize();
-			mmu_continue_loading(usb_timer.running()  || (lcd_commands_type == LcdCommands::Layer1Cal));
-			mmu_extruder = tmp_extruder; //filament change is finished
-			mmu_load_to_nozzle();
-		}
-	  }
-      else {
-          if (*(strchr_pointer + index) == '?')
-          {
-              if(mmu_enabled)
-              {
-                  tmp_extruder = choose_menu_P(_T(MSG_SELECT_FILAMENT), _T(MSG_FILAMENT));
-                  load_to_nozzle = true;
-              } else
-              {
-                  tmp_extruder = choose_menu_P(_T(MSG_SELECT_EXTRUDER), _T(MSG_EXTRUDER));
-              }
-          }
-          else {
-              tmp_extruder = code_value();
-              if (mmu_enabled && lcd_autoDepleteEnabled())
-              {
-                  tmp_extruder = ad_getAlternative(tmp_extruder);
-              }
-          }
-          st_synchronize();
-
-          if (mmu_enabled)
-          {
-              if ((tmp_extruder == mmu_extruder) && mmu_fil_loaded) //dont execute the same T-code twice in a row
-              {
-                  puts_P(duplicate_Tcode_ignored);
-              }
-			  else
-			  {
-#if defined(MMU_HAS_CUTTER) && defined(MMU_ALWAYS_CUT)
-			      if (EEPROM_MMU_CUTTER_ENABLED_always == eeprom_read_byte((uint8_t*)EEPROM_MMU_CUTTER_ENABLED))
-                  {
-                      mmu_command(MmuCmd::K0 + tmp_extruder);
-                      manage_response(true, true, MMU_UNLOAD_MOVE);
-                  }
-#endif //defined(MMU_HAS_CUTTER) && defined(MMU_ALWAYS_CUT)
-				  mmu_command(MmuCmd::T0 + tmp_extruder);
-				  manage_response(true, true, MMU_TCODE_MOVE);
-		          mmu_continue_loading(usb_timer.running()  || (lcd_commands_type == LcdCommands::Layer1Cal));
-
-				  mmu_extruder = tmp_extruder; //filament change is finished
-
-				  if (load_to_nozzle)// for single material usage with mmu
-				  {
-					  mmu_load_to_nozzle();
-				  }
-			  }
-          }
-          else
-          {
-              if (tmp_extruder >= EXTRUDERS) {
-                  SERIAL_ECHO_START;
-                  SERIAL_ECHO('T');
-                  SERIAL_PROTOCOLLN((int)tmp_extruder);
-                  SERIAL_ECHOLNRPGM(_n("Invalid extruder"));////MSG_INVALID_EXTRUDER
-              }
-              else {
-#if EXTRUDERS > 1
-                  bool make_move = false;
-#endif
-                  if (code_seen('F')) {
-#if EXTRUDERS > 1
-                      make_move = true;
-#endif
-                      next_feedrate = code_value();
-                      if (next_feedrate > 0.0) {
-                          feedrate = next_feedrate;
-                      }
-                  }
-#if EXTRUDERS > 1
-                  if (tmp_extruder != active_extruder) {
-                      // Save current position to return to after applying extruder offset
-                      set_destination_to_current();
-                      // Offset extruder (only by XY)
-                      int i;
-                      for (i = 0; i < 2; i++) {
-                          current_position[i] = current_position[i] -
-                                  extruder_offset[i][active_extruder] +
-                                  extruder_offset[i][tmp_extruder];
-                      }
-                      // Set the new active extruder and position
-                      active_extruder = tmp_extruder;
-                      plan_set_position_curposXYZE();
-                      // Move to the old position if 'F' was in the parameters
-                      if (make_move && Stopped == false) {
-                          prepare_move();
-                      }
-                  }
-#endif
-                  SERIAL_ECHO_START;
-                  SERIAL_ECHORPGM(_n("Active Extruder: "));////MSG_ACTIVE_EXTRUDER
-                  SERIAL_PROTOCOLLN((int)active_extruder);
-              }
-          }
-      }
+  else if(code_seen('T')){
+        TCodes(strchr_pointer, code_value());
   } // end if(code_seen('T')) (end of T codes)
   /*!
   #### End of T-Codes
@@ -9475,7 +9307,7 @@ void mesh_plan_buffer_line(const float &x, const float &y, const float &z, const
     }
 #endif  // MESH_BED_LEVELING
 
-void prepare_move()
+void prepare_move(uint16_t start_segment_idx)
 {
   clamp_to_software_endstops(destination);
   previous_millis_cmd.start();
@@ -9615,105 +9447,10 @@ void manage_inactivity_IR_ANALOG_Check(uint16_t &nFSCheckCount, ClFsensorPCB isV
 void manage_inactivity(bool ignore_stepper_queue/*=false*/) //default argument set in Marlin.h
 {
 #ifdef FILAMENT_SENSOR
-bool bInhibitFlag = false;
-#ifdef IR_SENSOR_ANALOG
-static uint16_t nFSCheckCount=0;
-#endif // IR_SENSOR_ANALOG
-
-	if (mmu_enabled == false)
-	{
-//-//		if (mcode_in_progress != 600) //M600 not in progress
-		if (!PRINTER_ACTIVE) bInhibitFlag=(menu_menu==lcd_menu_show_sensors_state); //Block Filament sensor actions if PRINTER is not active and Support::SensorInfo menu active
-#ifdef IR_SENSOR_ANALOG
-		bInhibitFlag=bInhibitFlag||bMenuFSDetect; // Block Filament sensor actions if Settings::HWsetup::FSdetect menu active
-#endif // IR_SENSOR_ANALOG
-		if ((mcode_in_progress != 600) && (eFilamentAction != FilamentAction::AutoLoad) && (!bInhibitFlag) && (menu_menu != lcd_move_e)) //M600 not in progress, preHeat @ autoLoad menu not active
-		{
-			if (!moves_planned() && !IS_SD_PRINTING && !usb_timer.running() && (lcd_commands_type != LcdCommands::Layer1Cal) && ! eeprom_read_byte((uint8_t*)EEPROM_WIZARD_ACTIVE))
-			{
-#ifdef IR_SENSOR_ANALOG
-				static uint16_t minVolt = Voltage2Raw(6.F), maxVolt = 0;
-				// detect min-max, some long term sliding window for filtration may be added
-				// avoiding floating point operations, thus computing in raw
-				if( current_voltage_raw_IR > maxVolt )maxVolt = current_voltage_raw_IR;
-				if( current_voltage_raw_IR < minVolt )minVolt = current_voltage_raw_IR;
-
-#if 0 // Start: IR Sensor debug info
-				{ // debug print
-					static uint16_t lastVolt = ~0U;
-					if( current_voltage_raw_IR != lastVolt ){
-						printf_P(PSTR("fs volt=%4.2fV (min=%4.2f max=%4.2f)\n"), Raw2Voltage(current_voltage_raw_IR), Raw2Voltage(minVolt), Raw2Voltage(maxVolt) );
-						lastVolt = current_voltage_raw_IR;
-					}
-				}
-#endif // End: IR Sensor debug info
-				//! The trouble is, I can hold the filament in the hole in such a way, that it creates the exact voltage
-				//! to be detected as the new fsensor
-				//! We can either fake it by extending the detection window to a looooong time
-				//! or do some other countermeasures
-
-				//! what we want to detect:
-				//! if minvolt gets below ~0.3V, it means there is an old fsensor
-				//! if maxvolt gets above 4.6V, it means we either have an old fsensor or broken cables/fsensor
-				//! So I'm waiting for a situation, when minVolt gets to range <0, 1.5> and maxVolt gets into range <3.0, 5>
-				//! If and only if minVolt is in range <0.3, 1.5> and maxVolt is in range <3.0, 4.6>, I'm considering a situation with the new fsensor
-				if( minVolt >= IRsensor_Ldiode_TRESHOLD && minVolt <= IRsensor_Lmax_TRESHOLD
-				 && maxVolt >= IRsensor_Hmin_TRESHOLD && maxVolt <= IRsensor_Hopen_TRESHOLD
-				){
-					manage_inactivity_IR_ANALOG_Check(nFSCheckCount, ClFsensorPCB::_Old, ClFsensorPCB::_Rev04, _i("FS v0.4 or newer") ); ////MSG_FS_V_04_OR_NEWER c=18
-				}
-				//! If and only if minVolt is in range <0.0, 0.3> and maxVolt is in range  <4.6, 5.0V>, I'm considering a situation with the old fsensor
-				//! Note, we are not relying on one voltage here - getting just +5V can mean an old fsensor or a broken new sensor - that's why
-				//! we need to have both voltages detected correctly to allow switching back to the old fsensor.
-				else if( minVolt < IRsensor_Ldiode_TRESHOLD
-				 && maxVolt > IRsensor_Hopen_TRESHOLD && maxVolt <= IRsensor_VMax_TRESHOLD
-				){
-					manage_inactivity_IR_ANALOG_Check(nFSCheckCount, ClFsensorPCB::_Rev04, oFsensorPCB=ClFsensorPCB::_Old, _i("FS v0.3 or older")); ////MSG_FS_V_03_OR_OLDER c=18
-				}
-#endif // IR_SENSOR_ANALOG
-				if (fsensor_check_autoload())
-				{
-#ifdef PAT9125
-					fsensor_autoload_check_stop();
-#endif //PAT9125
-//-//					if ((int)degHotend0() > extrude_min_temp)
-if(0)
-					{
-						Sound_MakeCustom(50,1000,false);
-						loading_flag = true;
-						enquecommand_front_P((PSTR("M701")));
-					}
-					else
-					{
-/*
-						lcd_update_enable(false);
-						show_preheat_nozzle_warning();
-						lcd_update_enable(true);
-*/
-						eFilamentAction=FilamentAction::AutoLoad;
-						bFilamentFirstRun=false;
-						if(target_temperature[0] >= extrude_min_temp){
-							bFilamentPreheatState=true;
-//							mFilamentItem(target_temperature[0],target_temperature_bed);
-							menu_submenu(mFilamentItemForce);
-						} else {
-							menu_submenu(lcd_generic_preheat_menu);
-							lcd_timeoutToStatus.start();
-						}
-					}
-				}
-			}
-			else
-			{
-#ifdef PAT9125
-				fsensor_autoload_check_stop();
-#endif //PAT9125
-                if (fsensor_enabled && !saved_printing)
-                    fsensor_update();
-			}
-		}
-	}
-#endif //FILAMENT_SENSOR
+    if (fsensor.update()) {
+        lcd_draw_update = 1; //cause lcd update so that fsensor event polling can be done from the lcd draw routine.
+    }
+#endif
 
 #ifdef SAFETYTIMER
 	handleSafetyTimer();
@@ -11095,7 +10832,7 @@ ISR(INT4_vect) {
 	EIMSK &= ~(1 << 4); //disable INT4 interrupt to make sure that this code will be executed just once
 	SERIAL_ECHOLNPGM("INT4");
     //fire normal uvlo only in case where EEPROM_UVLO is 0 or if IS_SD_PRINTING is 1.
-     if(PRINTER_ACTIVE && (!(eeprom_read_byte((uint8_t*)EEPROM_UVLO)))) uvlo_();
+     if(printer_active() && (!(eeprom_read_byte((uint8_t*)EEPROM_UVLO)))) uvlo_();
      if(eeprom_read_byte((uint8_t*)EEPROM_UVLO)) uvlo_tiny();
 }
 
@@ -11541,17 +11278,11 @@ void restore_print_from_ram_and_continue(float e_move)
     if (fan_check_error == EFCE_FIXED) fan_check_error = EFCE_OK; //reenable serial stream processing if printing from usb
 #endif
 
-//	for (int axis = X_AXIS; axis <= E_AXIS; axis++)
-//	    current_position[axis] = st_get_position_mm(axis);
-	active_extruder = saved_active_extruder; //restore active_extruder
-	fanSpeed = saved_fanSpeed;
-	if (degTargetHotend(saved_active_extruder) != saved_extruder_temperature)
-	{
-		setTargetHotendSafe(saved_extruder_temperature, saved_active_extruder);
-		heating_status = HeatingStatus::EXTRUDER_HEATING;
-		wait_for_heater(_millis(), saved_active_extruder);
-		heating_status = HeatingStatus::EXTRUDER_HEATING_COMPLETE;
-	}
+    // restore bed temperature (bed can be disabled during a thermal warning)
+    if (degBed() != saved_bed_temperature)
+        setTargetBed(saved_bed_temperature);
+	fanSpeed = saved_fan_speed;
+	restore_extruder_temperature_from_ram();
 	axis_relative_modes ^= (-saved_extruder_relative_mode ^ axis_relative_modes) & E_AXIS_MASK;
 	float e = saved_pos[E_AXIS] - e_move;
 	plan_set_e_position(e);
