@@ -5494,7 +5494,7 @@ static void lcd_main_menu()
 
     if ( ! ( IS_SD_PRINTING ||  usb_timer.running() || (lcd_commands_type == LcdCommands::Layer1Cal) ) ) {
 	    MENU_ITEM_SUBMENU_P(_i("Temperature"), lcd_control_temperature_menu);////MSG_TEMPERATURE c=18
-        if (MMU2::mmu2.Enabled()) {
+        if (mmu_enabled) {
             MENU_ITEM_SUBMENU_P(_T(MSG_LOAD_FILAMENT), lcd_LoadFilament);
             MENU_ITEM_SUBMENU_P(_i("Load to nozzle"), mmu_load_to_nozzle_menu);////MSG_LOAD_TO_NOZZLE c=18
     //-//          MENU_ITEM_FUNCTION_P(_T(MSG_UNLOAD_FILAMENT), extr_unload);
@@ -5509,7 +5509,7 @@ static void lcd_main_menu()
             MENU_ITEM_SUBMENU_P(_i("Change extruder"), change_extr_menu);////MSG_CHANGE_EXTR c=20
     #endif
     #ifdef FILAMENT_SENSOR
-            if ((fsensor.getAutoLoadEnabled()) && ((fsensor.isEnabled())) && (!MMU2::mmu2.Enabled()))
+            if ((fsensor_autoload_enabled) && ((fsensor_enabled)) && (!mmu_enabled))
                 MENU_ITEM_SUBMENU_P(_i("AutoLoad filament"), lcd_menu_AutoLoadFilament);////MSG_AUTOLOAD_FILAMENT c=18
             else
     #endif //FILAMENT_SENSOR
