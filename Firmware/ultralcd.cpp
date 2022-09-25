@@ -5846,14 +5846,14 @@ static void lcd_main_menu()
     MENU_ITEM_FUNCTION_P(PSTR("power panic"), uvlo_);
 #endif //TMC2130_DEBUG
 
-    // if ( ( IS_SD_PRINTING || is_usb_printing || (lcd_commands_type == LcdCommands::Layer1Cal)) && !homing_flag && !mesh_bed_leveling_flag) {
+    // if ( ( IS_SD_PRINTING ||  usb_timer.running() || (lcd_commands_type == LcdCommands::Layer1Cal)) && !homing_flag && !mesh_bed_leveling_flag) {
     //     MENU_ITEM_SUBMENU_P(_T(MSG_BABYSTEP_Z), lcd_babystep_z);//8
     // }
 
-    if ( ! ( IS_SD_PRINTING || is_usb_printing || (lcd_commands_type == LcdCommands::Layer1Cal) ) ) {
+    if ( ! ( IS_SD_PRINTING ||  usb_timer.running() || (lcd_commands_type == LcdCommands::Layer1Cal) ) ) {
 	    MENU_ITEM_SUBMENU_P(_i("Temperature"), lcd_control_temperature_menu);////MSG_TEMPERATURE c=18
         if (mmu_enabled) {
-            MENU_ITEM_SUBMENU_P(_T(MSG_LOAD_FILAMENT), fil_load_menu);
+            MENU_ITEM_SUBMENU_P(_T(MSG_LOAD_FILAMENT), lcd_LoadFilament);
             MENU_ITEM_SUBMENU_P(_i("Load to nozzle"), mmu_load_to_nozzle_menu);////MSG_LOAD_TO_NOZZLE c=18
     //-//          MENU_ITEM_FUNCTION_P(_T(MSG_UNLOAD_FILAMENT), extr_unload);
     //bFilamentFirstRun=true;
@@ -5889,7 +5889,7 @@ static void lcd_main_menu()
     } else {
         MENU_ITEM_SUBMENU_P(_i("Preheat"), lcd_preheat_menu);////MSG_PREHEAT c=18
     }
-    if ( ! ( IS_SD_PRINTING || is_usb_printing || (lcd_commands_type == LcdCommands::Layer1Cal) ) ) {
+    if ( ! ( IS_SD_PRINTING ||  usb_timer.running() || (lcd_commands_type == LcdCommands::Layer1Cal) ) ) {
         MENU_ITEM_SUBMENU_P(_T(MSG_SETTINGS), lcd_settings_menu);
         if(!isPrintPaused) MENU_ITEM_SUBMENU_P(_T(MSG_CALIBRATION), lcd_calibration_menu);
     }
@@ -5940,7 +5940,7 @@ static void lcd_main_menu()
     }
 #endif //SDSUPPORT
 
-    if((!isPrintPaused && !IS_SD_PRINTING && !is_usb_printing) || (isPrintPaused && ( IS_SD_PRINTING || is_usb_printing)) || ((IS_SD_PRINTING || is_usb_printing || isPrintPaused) && mesh_bed_leveling_flag == false && homing_flag == false) ) {
+    if((!isPrintPaused && !IS_SD_PRINTING && ! usb_timer.running()) || (isPrintPaused && ( IS_SD_PRINTING ||  usb_timer.running())) || ((IS_SD_PRINTING ||  usb_timer.running() || isPrintPaused) && mesh_bed_leveling_flag == false && homing_flag == false) ) {
         if (!farm_mode) {
             const int8_t sheet = eeprom_read_byte(&(EEPROM_Sheets_base->active_sheet));
             const int8_t nextSheet = eeprom_next_initialized_sheet(sheet);
