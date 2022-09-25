@@ -61,6 +61,7 @@
 
 // Home position
 #define MANUAL_X_HOME_POS 0
+// #define MANUAL_Y_HOME_POS -2.2
 #define MANUAL_Y_HOME_POS -2.2
 #define MANUAL_Z_HOME_POS 50
 
@@ -69,18 +70,18 @@
 #define X_MIN_POS 0
 #define Y_MAX_POS 210
 #define Y_MIN_POS -4 //orig -4
-#define Z_MAX_POS 200
+#define Z_MAX_POS 175
 #define Z_MIN_POS 0.15
 
 // Canceled home position
 #define X_CANCEL_POS 50
 #define Y_CANCEL_POS 190
-#define Z_CANCEL_LIFT 50
+#define Z_CANCEL_LIFT 100
 
 //Pause print position
 #define X_PAUSE_POS 50
 #define Y_PAUSE_POS 190
-#define Z_PAUSE_LIFT 40
+#define Z_PAUSE_LIFT 80
 
 #define NUM_AXIS 4 // The axis order in all axis related arrays is X, Y, Z, E
 #define HOMING_FEEDRATE {6000, 6000, 1200, 0}  // set the homing speeds (mm/min) // 3000 is also valid for stallGuard homing. Valid range: 2200 - 3000
@@ -102,11 +103,11 @@
 #define DEFAULT_MAX_ACCELERATION_SILENT     {960, 960, 200, 5000}    // (mm/sec^2) max acceleration (M201), silent mode
 
 
-#define DEFAULT_ACCELERATION          1250   // X, Y, Z and E max acceleration in mm/s^2 for printing moves (M204P)
-#define DEFAULT_RETRACT_ACCELERATION  1250   // X, Y, Z and E max acceleration in mm/s^2 for retracts (M204R)
-#define DEFAULT_TRAVEL_ACCELERATION   1250   // X, Y, Z and E max acceleration in mm/s^2 for travels (M204T)
+#define DEFAULT_ACCELERATION          1500   // X, Y, Z and E max acceleration in mm/s^2 for printing moves (M204P)
+#define DEFAULT_RETRACT_ACCELERATION  1500   // X, Y, Z and E max acceleration in mm/s^2 for retracts (M204R)
+#define DEFAULT_TRAVEL_ACCELERATION   1500   // X, Y, Z and E max acceleration in mm/s^2 for travels (M204T)
 
-#define MANUAL_FEEDRATE {2700, 2700, 1000, 100}   // set the speeds for manual moves (mm/min)
+#define MANUAL_FEEDRATE {3500, 3500, 1500, 100}   // set the speeds for manual moves (mm/min)
 
 //Silent mode limits
 #define SILENT_MAX_ACCEL_XY      960ul  // max acceleration in silent mode in mm/s^2
@@ -114,7 +115,7 @@
 
 //Normal mode limits
 #define NORMAL_MAX_ACCEL_XY     2500ul  // max acceleration in normal mode in mm/s^2
-#define NORMAL_MAX_FEEDRATE_XY   200  // max feedrate in mm/s
+#define NORMAL_MAX_FEEDRATE_XY   250  // max feedrate in mm/s
 
 //number of bytes from end of the file to start check
 #define END_FILE_SECTION 20000
