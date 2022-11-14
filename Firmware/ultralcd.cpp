@@ -5217,15 +5217,16 @@ void unload_filament(bool automatic)
 	disable_e2();
 	_delay(100);
 
-	Sound_MakeSound(e_SOUND_TYPE_StandardPrompt);
-	uint8_t counterBeep = 0;
-	while (!lcd_clicked() && (counterBeep < 50)) {
-		delay_keep_alive(100);
-		counterBeep++;
-	}
+	// Sound_MakeSound(e_SOUND_TYPE_StandardPrompt);
+	// uint8_t counterBeep = 0;
+	// while (!lcd_clicked() && (counterBeep < 50)) {
+	// 	delay_keep_alive(100);
+	// 	counterBeep++;
+	// }
 	st_synchronize();
-	while (lcd_clicked()) delay_keep_alive(100);
+	// while (lcd_clicked()) delay_keep_alive(100);
 
+    Sound_MakeSound(e_SOUND_TYPE_StandardConfirm);
 	lcd_update_enable(true);
 
 	lcd_setstatuspgm(MSG_WELCOME);
