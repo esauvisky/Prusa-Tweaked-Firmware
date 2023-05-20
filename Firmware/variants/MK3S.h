@@ -17,7 +17,7 @@
 #define NOZZLE_TYPE "E3Dv6full"
 
 // Printer name
-#define CUSTOM_MENDEL_NAME "Prusa i3 MK3S"
+#define CUSTOM_MENDEL_NAME "Emi's MK3S+"
 
 // Electronics
 #define MOTHERBOARD BOARD_EINSY_1_0a
@@ -56,7 +56,7 @@
 // Home position
 #define MANUAL_X_HOME_POS 0
 #define MANUAL_Y_HOME_POS -2.2
-#define MANUAL_Z_HOME_POS 0.2
+#define MANUAL_Z_HOME_POS 10
 
 // Travel limits after homing
 #define X_MAX_POS 255
