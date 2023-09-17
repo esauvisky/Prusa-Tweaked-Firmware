@@ -57,14 +57,14 @@
 // Home position
 #define MANUAL_X_HOME_POS 0
 #define MANUAL_Y_HOME_POS -2.2
-#define MANUAL_Z_HOME_POS 10
+#define MANUAL_Z_HOME_POS 0.2
 
 // Travel limits after homing
 #define X_MAX_POS 255
 #define X_MIN_POS 0
 #define Y_MAX_POS 212.5
 #define Y_MIN_POS -4 //orig -4
-#define Z_MAX_POS 210
+#define Z_MAX_POS 200
 #define Z_MIN_POS 0.15
 
 // Z height correction value
@@ -93,7 +93,7 @@
  */
 #define SHEET_PRINT_ZERO_REF_Y -2.f
 
-#define DEFAULT_MAX_FEEDRATE                {300, 300, 18, 180}      // (mm/sec)   max feedrate (M203)
+#define DEFAULT_MAX_FEEDRATE                {300, 300, 18, 180}      // (mm/sec)   max feedrate (M203) # requires M203 X300 Y300 Y18 followed by M500 to store persistently
 #define DEFAULT_MAX_FEEDRATE_SILENT         {100, 100, 12, 120}      // (mm/sec)   max feedrate (M203), silent mode
 
 #define DEFAULT_MAX_ACCELERATION            {2000, 2000, 400, 5000}  // (mm/sec^2) max acceleration (M201)
@@ -111,7 +111,7 @@
 #define SILENT_MAX_FEEDRATE_XY   100  // max feedrate in mm/s
 
 //Normal mode limits
-#define NORMAL_MAX_ACCEL_XY     2500ul  // max acceleration in normal mode in mm/s^2
+#define NORMAL_MAX_ACCEL_XY     3000ul  // max acceleration in normal mode in mm/s^2
 #define NORMAL_MAX_FEEDRATE_XY   250  // max feedrate in mm/s
 
 //number of bytes from end of the file to start check
@@ -137,7 +137,7 @@
 
 // Safety timer
 #define SAFETYTIMER
-#define DEFAULT_SAFETYTIMER_TIME_MINS 30
+#define DEFAULT_SAFETYTIMER_TIME_MINS 60
 
 // Offline crash dumper
 #define XFLASH_DUMP     // enable dump functionality (including D20/D21/D22)
@@ -194,7 +194,7 @@
 //#define DEBUG_DISABLE_SWLIMITS  //sw limits ignored
 //#define DEBUG_DISABLE_LCD_STATUS_LINE  //empty four lcd line
 //#define DEBUG_DISABLE_PREVENT_EXTRUDER //cold extrusion and long extrusion allowed
-//#define DEBUG_DISABLE_FORCE_SELFTEST //disable force selftest
+#define DEBUG_DISABLE_FORCE_SELFTEST //disable force selftest
 //#define DEBUG_XSTEP_DUP_PIN 21   //duplicate x-step output to pin 21 (SCL on P3)
 //#define DEBUG_YSTEP_DUP_PIN 21   //duplicate y-step output to pin 21 (SCL on P3)
 //#define DEBUG_DISABLE_FANCHECK     //disable fan check (no ISR INT7, check disabled)
@@ -205,6 +205,11 @@
 #define CMD_DIAGNOSTICS //Show cmd queue length on printer display
 #endif /* DEBUG_BUILD */
 
+#define DEBUG_CRASHDET_COUNTERS  //Display crash-detection counters on LCD
+#define DEBUG_DISABLE_STARTMSGS //no startup messages
+#define DEBUG_DISABLE_FORCE_SELFTEST //disable force selftest
+// #define PLANNER_DIAGNOSTICS // Show the planner queue status on printer display.
+#define CMD_DIAGNOSTICS //Show cmd queue length on printer display
 
 #define LINEARITY_CORRECTION
 #define TMC2130_LINEARITY_CORRECTION
@@ -431,7 +436,7 @@
  HOST FEATURES
  *------------------------------------*/
 
-// Uncomment if the host supports '//action:shutdown'. It will add "Shutdown host" to the LCD meun. 
+// Uncomment if the host supports '//action:shutdown'. It will add "Shutdown host" to the LCD meun.
 //#define HOST_SHUTDOWN
 
 // Uncomment if the host doesn't support '//action:ready' & '//action:notready'.

@@ -6423,32 +6423,7 @@ void process_commands()
     ### M221 - Set extrude factor override percentage <a href="https://reprap.org/wiki/G-code#M221:_Set_extrude_factor_override_percentage">M221: Set extrude factor override percentage</a>
     #### Usage
 
-        M221 [ S ]
-
-    #### Parameters
-    - `S` - Extrude factor override percentage (0..100 or higher), default 100%
-    */
-    case 221:
-    {
-        if (code_seen('S'))
-        {
-            extrudemultiply = code_value_short();
-            calculate_extruder_multipliers();
-        }
-        else
-        {
-            printf_P(PSTR("%i%%\n"), extrudemultiply);
-        }
-    }
-    break;
-
-    /*!
-    ### M226 - Wait for Pin state <a href="https://reprap.org/wiki/G-code#M226:_Wait_for_pin_state">M226: Wait for pin state</a>
-    Wait until the specified pin reaches the state required
-    #### Usage
-
-        M226 [ P | S ]
-
+	st_init();    // Initialize stepper, this enables interrupts!
     #### Parameters
     - `P` - pin number
     - `S` - pin state
@@ -6510,7 +6485,6 @@ void process_commands()
     ### M300 - Play tone <a href="https://reprap.org/wiki/G-code#M300:_Play_beep_sound">M300: Play beep sound</a>
     In Prusa Firmware the defaults are `100Hz` and `1000ms`, so that `M300` without parameters will beep for a second.
     #### Usage
-
         M300 [ S | P ]
 
     #### Parameters
@@ -7917,12 +7891,12 @@ void process_commands()
 
         // Z lift. For safety only allow positive values
         if (code_seen('Z')) z_target = fabs(code_value());
-        
+
         // Raise the Z axis
         float delta = raise_z(z_target);
 
         // Load filament
-        gcode_M701(fastLoadLength, mmuSlotIndex, !code_seen('Z')); // if no z -> trigger MIN_Z_FOR_LOAD for backwards compatibility on 3.12 and older FW 
+        gcode_M701(fastLoadLength, mmuSlotIndex, !code_seen('Z')); // if no z -> trigger MIN_Z_FOR_LOAD for backwards compatibility on 3.12 and older FW
 
         // Restore Z axis
         raise_z(-delta);
@@ -8192,7 +8166,6 @@ void process_commands()
     ### D1 - Clear EEPROM and RESET <a href="https://reprap.org/wiki/G-code#D1:_Clear_EEPROM_and_RESET">D1: Clear EEPROM and RESET</a>
 
         D1
-
     *
     */
 	case 1:
@@ -8829,8 +8802,7 @@ static void handleSafetyTimer()
     else if (safetyTimer.expired(farm_mode?FARM_DEFAULT_SAFETYTIMER_TIME_ms:safetytimer_inactive_time))
     {
         disable_heater();
-        lcd_show_fullscreen_message_and_wait_P(_T(MSG_BED_HEATING_SAFETY_DISABLED));
-        lcd_return_to_status();
+        // lcd_show_fullscreen_message_and_wait_P(_T(MSG_BED_HEATING_SAFETY_DISABLED));
     }
 }
 #endif //SAFETYTIMER
