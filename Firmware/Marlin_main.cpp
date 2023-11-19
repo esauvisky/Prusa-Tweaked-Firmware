@@ -7322,7 +7322,7 @@ Sigma_Exit:
               break;
           }
       }
-      Sound_MakeCustom(beepP, beepS, false);
+      Sound_MakeCustom(beepP, beepS, true);
     }
     break;
     #endif // M300
