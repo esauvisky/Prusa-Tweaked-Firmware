@@ -81,7 +81,7 @@
 #define Z_PAUSE_LIFT 20
 
 #define NUM_AXIS 4 // The axis order in all axis related arrays is X, Y, Z, E
-#define HOMING_FEEDRATE {6000, 6000, 1600, 0}  // set the homing speeds (mm/min) // 3000 is also valid for stallGuard homing. Valid range: 2200 - 3000
+#define HOMING_FEEDRATE {6000, 6000, 3000, 0}  // set the homing speeds (mm/min) // 3000 is also valid for stallGuard homing. Valid range: 2200 - 3000
 
 //#define DEFAULT_Y_OFFSET    4.f // Default distance of Y_MIN_POS point from endstop, when the printer is not calibrated.
 /**
@@ -97,17 +97,17 @@
 #define DEFAULT_MAX_FEEDRATE_SILENT         {100, 100, 12, 120}      // (mm/sec)   max feedrate (M203), silent mode
 
 #define DEFAULT_MAX_ACCELERATION            {2000, 2000, 400, 5000}  // (mm/sec^2) max acceleration (M201)
-#define DEFAULT_MAX_ACCELERATION_SILENT     {960, 960, 200, 5000}    // (mm/sec^2) max acceleration (M201), silent mode
+#define DEFAULT_MAX_ACCELERATION_SILENT     {1200, 1200, 400, 5000}    // (mm/sec^2) max acceleration (M201), silent mode
 
 
 #define DEFAULT_ACCELERATION          1500   // X, Y, Z and E max acceleration in mm/s^2 for printing moves (M204P)
 #define DEFAULT_RETRACT_ACCELERATION  1500   // X, Y, Z and E max acceleration in mm/s^2 for retracts (M204R)
-#define DEFAULT_TRAVEL_ACCELERATION   1500   // X, Y, Z and E max acceleration in mm/s^2 for travels (M204T)
+#define DEFAULT_TRAVEL_ACCELERATION   2500   // X, Y, Z and E max acceleration in mm/s^2 for travels (M204T)
 
-#define MANUAL_FEEDRATE {3600, 3600, 1350, 135}   // set the speeds for manual moves (mm/min)
+#define MANUAL_FEEDRATE {4000, 4000, 2500, 200}   // set the speeds for manual moves (mm/min)
 
 //Silent mode limits
-#define SILENT_MAX_ACCEL_XY      960ul  // max acceleration in silent mode in mm/s^2
+#define SILENT_MAX_ACCEL_XY     2000ul  // max acceleration in silent mode in mm/s^2
 #define SILENT_MAX_FEEDRATE_XY   100  // max feedrate in mm/s
 
 //Normal mode limits
@@ -208,8 +208,9 @@
 #define DEBUG_CRASHDET_COUNTERS  //Display crash-detection counters on LCD
 #define DEBUG_DISABLE_STARTMSGS //no startup messages
 #define DEBUG_DISABLE_FORCE_SELFTEST //disable force selftest
+#define DEBUG_RESUME_PRINT       //Resume/save print debug enable
 // #define PLANNER_DIAGNOSTICS // Show the planner queue status on printer display.
-#define CMD_DIAGNOSTICS //Show cmd queue length on printer display
+// #define CMD_DIAGNOSTICS //Show cmd queue length on printer display
 
 #define LINEARITY_CORRECTION
 #define TMC2130_LINEARITY_CORRECTION
@@ -469,7 +470,7 @@
 #define MESH_MEAS_NUM_Y_POINTS 3
 
 // Maximum bed level correction value
-#define BED_ADJUSTMENT_UM_MAX 100
+#define BED_ADJUSTMENT_UM_MAX 300
 
 #define MESH_HOME_Z_CALIB 0.2
 #define MESH_HOME_Z_SEARCH 2.5f           // Z lift for homing, mesh bed leveling etc.

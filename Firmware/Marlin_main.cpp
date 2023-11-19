@@ -3243,7 +3243,7 @@ static void gcode_M600(const bool automatic, const float x_position, const float
             mmu_M600_unload_filament();
         } else {
             // Beep, manage nozzle heater and wait for user to start unload filament
-            M600_wait_for_user();
+            // M600_wait_for_user();
             unload_filament(e_shift_late);
         }
         st_synchronize();          // finish moves
