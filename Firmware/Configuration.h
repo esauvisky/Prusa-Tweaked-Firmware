@@ -288,7 +288,7 @@ your extruder heater takes 2 minutes to hit the target on heating.
 
 #define Z_HEIGHT_HIDE_LIVE_ADJUST_MENU 200.0f
 
-#define HOME_Z_SEARCH_THRESHOLD 0.15f             // Threshold of the Z height in calibration
+#define HOME_Z_SEARCH_THRESHOLD 0.20f             // Threshold of the Z height in calibration
 
 //============================= Bed Auto Leveling ===========================
 
@@ -350,9 +350,9 @@ your extruder heater takes 2 minutes to hit the target on heating.
   #define Z_RAISE_BEFORE_HOMING 5       // (in mm) Raise Z before homing (G28) for Probe Clearance.
                                         // Be sure you have this distance over your Z_MAX_POS in case
 
-  #define XY_TRAVEL_SPEED 15000         // X and Y axis travel speed between probes, in mm/min
+  #define XY_TRAVEL_SPEED 25000         // X and Y axis travel speed between probes, in mm/min
 
-  #define Z_RAISE_BEFORE_PROBING 15    //How much the extruder will be raised before traveling to the first probing point.
+  #define Z_RAISE_BEFORE_PROBING 5    //How much the extruder will be raised before traveling to the first probing point.
   #define Z_RAISE_BETWEEN_PROBINGS 3  //How much the extruder will be raised when traveling from between next probing points
 
   //#define Z_PROBE_SLED // turn on if you have a z-probe mounted on a sled like those designed by Charles Bell
@@ -430,8 +430,8 @@ your extruder heater takes 2 minutes to hit the target on heating.
 #ifdef CUSTOM_M_CODES
 #ifdef ENABLE_AUTO_BED_LEVELING
   #define CUSTOM_M_CODE_SET_Z_PROBE_OFFSET 851
-  #define Z_PROBE_OFFSET_RANGE_MIN -15
-  #define Z_PROBE_OFFSET_RANGE_MAX -5
+  #define Z_PROBE_OFFSET_RANGE_MIN -12
+  #define Z_PROBE_OFFSET_RANGE_MAX -8
 #endif // ENABLE_AUTO_BED_LEVELING
 #endif // CUSTOM_M_CODES
 

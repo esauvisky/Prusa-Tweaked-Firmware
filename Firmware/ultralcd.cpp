@@ -2964,7 +2964,7 @@ void lcd_show_fullscreen_message_and_wait_P(const char *msg)
     const char *msg_next = lcd_display_message_fullscreen_P(msg);
     bool multi_screen = msg_next != NULL;
 	lcd_consume_click();
-	KEEPALIVE_STATE(PAUSED_FOR_USER);
+	// KEEPALIVE_STATE(PAUSED_FOR_USER);
 	// Until confirmed by a button click.
 	for (;;) {
 		if (msg_next == NULL) {
@@ -3695,8 +3695,8 @@ static void lcd_wizard_load() {
         // used here when a MMU is used.
         eFilamentAction = FilamentAction::MmuLoad;
     } else {
-        lcd_show_fullscreen_message_and_wait_P(
-            _T(MSG_WIZARD_LOAD_FILAMENT));
+        // lcd_show_fullscreen_message_and_wait_P(
+        //     _T(MSG_WIZARD_LOAD_FILAMENT));
         lcd_update_enable(false);
         lcd_clear();
         lcd_puts_at_P(0, 2, _T(MSG_LOADING_FILAMENT));
@@ -3859,7 +3859,7 @@ void lcd_wizard(WizState state)
 				wait_preheat();
 				unload_filament(FILAMENTCHANGE_FINALRETRACT); // unload current filament
 				lcd_wizard_load(); // load filament
-				setTargetHotend(0); //we are finished, cooldown nozzle
+				// setTargetHotend(0); //we are finished, cooldown nozzle
 				state = S::Restore;
 			}
 			break;
@@ -4588,7 +4588,7 @@ static void lcd_calibration_menu()
     MENU_ITEM_FUNCTION_P(_n("Thermal Model cal."), lcd_thermal_model_cal);
 #endif //THERMAL_MODEL
 
-    MENU_END();
+  MENU_END();
 }
 
 //! @brief Select one of numbered items
@@ -4923,13 +4923,14 @@ void unload_filament(float unloadLength)
 	_delay(100);
 
 	Sound_MakeSound(e_SOUND_TYPE_StandardPrompt);
-	uint8_t counterBeep = 0;
-	while (!lcd_clicked() && (counterBeep < 50)) {
-		delay_keep_alive(100);
-		counterBeep++;
-	}
+	Sound_MakeSound(e_SOUND_TYPE_StandardPrompt);
+	// uint8_t counterBeep = 0;
+	// while (!lcd_clicked() && (counterBeep < 50)) {
+	// 	delay_keep_alive(100);
+	// 	counterBeep++;
+	// }
 	st_synchronize();
-	while (lcd_clicked()) delay_keep_alive(100);
+	// while (lcd_clicked()) delay_keep_alive(100);
 
 	lcd_update_enable(true);
 
@@ -6950,7 +6951,7 @@ static uint8_t lcd_selftest_screen(TestScreen screen, uint8_t _progress, uint8_t
 
 	lcd_update_enable(false);
 	const char _indicator = (_progress >= _progress_scale) ? '-' : '|';
-	if (_clear) 
+	if (_clear)
 		lcd_clear();
 	else
 		lcd_home();
