@@ -94,7 +94,7 @@
 #define SHEET_PRINT_ZERO_REF_Y -2.f
 
 #define DEFAULT_MAX_FEEDRATE                {300, 300, 18, 180}      // (mm/sec)   max feedrate (M203) # requires M203 X300 Y300 Y18 followed by M500 to store persistently
-#define DEFAULT_MAX_FEEDRATE_SILENT         {120, 120, 12, 120}      // (mm/sec)   max feedrate (M203), silent mode
+#define DEFAULT_MAX_FEEDRATE_SILENT         {160, 160, 18, 180}      // (mm/sec)   max feedrate (M203), silent mode
 
 #define DEFAULT_MAX_ACCELERATION            {3000, 3000, 750, 5000}  // (mm/sec^2) max acceleration (M201)
 #define DEFAULT_MAX_ACCELERATION_SILENT     {3000, 3000, 750, 5000}    // (mm/sec^2) max acceleration (M201), silent mode
@@ -108,7 +108,7 @@
 
 //Silent mode limits
 #define SILENT_MAX_ACCEL_XY     2000ul  // max acceleration in silent mode in mm/s^2
-#define SILENT_MAX_FEEDRATE_XY   120  // max feedrate in mm/s
+#define SILENT_MAX_FEEDRATE_XY   160  // max feedrate in mm/s
 
 //Normal mode limits
 #define NORMAL_MAX_ACCEL_XY     3000ul  // max acceleration in normal mode in mm/s^2
