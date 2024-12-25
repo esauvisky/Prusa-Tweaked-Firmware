@@ -5725,7 +5725,8 @@ void lcd_print_stop_finish()
         }
     }
 
-    lcd_cooldown(); //turns off heaters and fan; goes to status screen.
+    fanSpeed = 0;
+    lcd_return_to_status();
 
     finishAndDisableSteppers(); //M84
     axis_relative_modes = E_AXIS_MASK; //XYZ absolute, E relative
