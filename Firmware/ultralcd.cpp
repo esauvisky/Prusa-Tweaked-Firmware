@@ -7305,7 +7305,7 @@ void menu_lcd_longpress_func(void)
     // Wake up the LCD backlight and,
     // start LCD inactivity timer
     lcd_timeoutToStatus.start();
-    if (homing_flag || mesh_bed_leveling_flag || menu_menu == lcd_babystep_z || menu_menu == lcd_move_z || menu_is_any_block() || Stopped)
+    if (menu_menu == lcd_babystep_z || menu_menu == lcd_move_z || menu_is_any_block() || Stopped)
     {
         // disable longpress during re-entry, while homing, calibration or if a serious error
         lcd_draw_update = 2;
@@ -7327,6 +7327,8 @@ void menu_lcd_longpress_func(void)
           || menu_menu == lcd_main_menu
           || menu_menu == lcd_tune_menu
           || menu_menu == lcd_support_menu
+          || menu_menu == homing_flag
+          || menu_menu == mesh_bed_leveling_flag
            )
         ){
             lcd_clear();
